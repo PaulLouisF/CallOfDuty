@@ -94,5 +94,31 @@ def test_agent_does_not_propose_resupply_for_normal_clinic():
     recommendation = get_agent_recommendation(client, "clinic-a")
 
     assert recommendation.llm_used is False
+    assert recommendation.llm_agent is None
     assert recommendation.recommendation.startswith("No immediate")
     assert "warehouse_only" in recommendation.data_sources[-1]
+
+
+def test_agent_adds_llm_note_for_critical_clinic_without_changing_deterministic_recommendation(monkeypatch):
+    monkeypatch.setenv("LLM_API_KEY", "")
+    client = FakeClient(
+        {
+            "id": "clinic-critical",
+            "name": "Critical Clinic",
+            "test_kits_available": 0,
+            "people_waiting": 96,
+            "nurses_available": 2,
+            "threshold_min_kits": 50,
+            "testing_capacity_per_hour": 24,
+            "queue_delay_hours": 4.0,
+            "operations_remaining_hours": 0.0,
+            "risk_level": "critical",
+        }
+    )
+
+    recommendation = get_agent_recommendation(client, "clinic-critical")
+
+    assert recommendation.recommendation.startswith("Resupply")
+    assert recommendation.llm_provider == "deterministic"
+    assert recommendation.llm_agent is not None
+    assert recommendation.llm_agent.available is False

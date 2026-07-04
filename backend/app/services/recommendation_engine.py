@@ -4,6 +4,7 @@ from typing import Any
 
 from app.models import AgentRecommendation, ResupplyOption
 from app.neo4j_client import Neo4jClient
+from app.services.llm_agent import generate_critical_llm_note
 from app.services.risk_engine import recommended_transfer_quantity
 
 
@@ -159,7 +160,7 @@ def get_agent_recommendation(
             "The clinic is not currently high or critical risk, so no resupply action is proposed."
         )
 
-    return AgentRecommendation(
+    deterministic = AgentRecommendation(
         clinic_id=clinic["id"],
         clinic=clinic["name"],
         status=clinic["risk_level"],
@@ -176,3 +177,7 @@ def get_agent_recommendation(
             "backend:recommendation_engine:warehouse_only",
         ],
     )
+    deterministic.llm_agent = generate_critical_llm_note(
+        clinic, options, deterministic
+    )
+    return deterministic

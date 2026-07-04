@@ -56,6 +56,19 @@ The agent endpoint is deterministic. When a clinic is high or critical risk,
 it proposes a solution using only Neo4j warehouse-to-clinic `CAN_SUPPLY`
 relationships. Clinic-to-clinic stock is intentionally excluded.
 
+Optional critical-case LLM note:
+
+```bash
+export LLM_API_KEY=your_mistral_key
+export LLM_BASE_URL=https://api.mistral.ai/v1
+export LLM_MODEL=mistral-small-latest
+```
+
+The deterministic recommendation remains the source of truth. The LLM note
+appears underneath it only for `critical` clinics and receives only a JSON
+payload built from Neo4j warehouse/clinic data, warehouse-to-clinic supply
+relationships, and deterministic backend outputs.
+
 Run the frontend:
 
 ```bash

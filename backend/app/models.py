@@ -64,6 +64,15 @@ class ResupplyOption(BaseModel):
     reason: str
 
 
+class LLMAgentNote(BaseModel):
+    available: bool
+    provider: str
+    model: Optional[str] = None
+    reasoning_summary: list[str] = Field(default_factory=list)
+    proposed_action: str
+    data_sources: list[str] = Field(default_factory=list)
+
+
 class AgentRecommendation(BaseModel):
     clinic_id: str
     clinic: str
@@ -75,6 +84,7 @@ class AgentRecommendation(BaseModel):
     llm_provider: str = "deterministic"
     llm_model: Optional[str] = None
     data_sources: list[str] = Field(default_factory=list)
+    llm_agent: Optional[LLMAgentNote] = None
 
 
 class SupplyLink(BaseModel):

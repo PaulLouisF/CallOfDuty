@@ -58,6 +58,15 @@ export type ResupplyOption = {
   reason: string;
 };
 
+export type LLMAgentNote = {
+  available: boolean;
+  provider: string;
+  model: string | null;
+  reasoning_summary: string[];
+  proposed_action: string;
+  data_sources: string[];
+};
+
 export type AgentRecommendation = {
   clinic_id: string;
   clinic: string;
@@ -69,6 +78,7 @@ export type AgentRecommendation = {
   llm_provider: string;
   llm_model: string | null;
   data_sources: string[];
+  llm_agent: LLMAgentNote | null;
 };
 
 export type Selection =

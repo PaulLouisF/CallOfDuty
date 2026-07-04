@@ -44,6 +44,35 @@ export function AgentReasoningPanel({
         ))}
       </ul>
 
+      {recommendation.llm_agent && (
+        <section className="llm-agent-panel">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="eyebrow">LLM agent</p>
+              <h3>{recommendation.llm_agent.proposed_action}</h3>
+            </div>
+            <span
+              className={`agent-status ${
+                recommendation.llm_agent.available ? "agent-on" : "agent-off"
+              }`}
+            >
+              {recommendation.llm_agent.available ? "Active" : "Needs key"}
+            </span>
+          </div>
+          <div className="agent-source">
+            {recommendation.llm_agent.provider}
+            {recommendation.llm_agent.model
+              ? ` (${recommendation.llm_agent.model})`
+              : ""}
+          </div>
+          <ul className="reason-list">
+            {recommendation.llm_agent.reasoning_summary.map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {alternatives.length > 0 && (
         <div className="space-y-2">
           <p className="eyebrow">Alternatives</p>
