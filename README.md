@@ -1,0 +1,119 @@
+# Ebola Test Kit Resupply Platform
+
+MVP for graph-backed Ebola test kit resupply decisions around Kinshasa, DRC.
+
+The backend owns all operational calculations:
+
+- nurse testing capacity
+- queue delay
+- operations remaining
+- risk level
+- ranked resupply options from warehouses and connected clinics
+
+The frontend displays a Leaflet map, selected node details, clinic update form,
+and deterministic agent-style reasoning from backend data.
+
+## Structure
+
+```text
+backend/   FastAPI, Neo4j driver, deterministic risk and recommendation logic
+frontend/  React, TypeScript, Leaflet, Tailwind
+docker-compose.yml  Neo4j local service
+```
+
+## Run Locally
+
+Start Neo4j:
+
+```bash
+docker compose up -d neo4j
+```
+
+Run the backend:
+
+```bash
+cd backend
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+If port `8000` is already occupied, use another port:
+
+```bash
+uvicorn app.main:app --reload --port 8010
+```
+
+Seed demo data:
+
+```bash
+curl -X POST http://127.0.0.1:8000/admin/reset-demo-data
+```
+
+Run the frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+If the backend is running on a non-default port, set `VITE_API_BASE_URL`:
+
+```bash
+VITE_API_BASE_URL=http://127.0.0.1:8010 npm run dev
+```
+
+Open `http://127.0.0.1:5173`.
+
+## Key Endpoints
+
+```text
+GET  /health
+POST /admin/reset-demo-data
+GET  /clinics
+GET  /clinics/{clinic_id}
+PATCH /clinics/{clinic_id}
+GET  /warehouses
+GET  /warehouses/{warehouse_id}
+PATCH /warehouses/{warehouse_id}
+GET  /clinics/{clinic_id}/resupply-options
+GET  /clinics/{clinic_id}/agent-recommendation
+GET  /alerts
+```
+
+## Demo Checks
+
+Clinic B should start as high risk:
+
+```text
+35 kits, 96 people waiting, 2 nurses
+capacity = 24 tests/hour
+queue delay = 4.0 hours
+operations remaining = 1.46 hours
+```
+
+The top recommendation should be Central Medical Warehouse with 61 kits.
+
+Clinic D should also start as high risk:
+
+```text
+20 kits, 60 people waiting, 1 nurse
+capacity = 12 tests/hour
+queue delay = 5.0 hours
+operations remaining = 1.67 hours
+```
+
+The top recommendation should be East Logistics Hub with 28 kits.
+
+## Tests
+
+Run backend calculation tests:
+
+```bash
+cd backend
+PYTHONPATH=. python3 -m unittest discover -s tests
+```
+
+If you install `pytest`, the same tests also run with `PYTHONPATH=. pytest`.

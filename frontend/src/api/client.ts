@@ -1,0 +1,51 @@
+import type {
+  AgentRecommendation,
+  Clinic,
+  ClinicUpdate,
+  Warehouse,
+} from "../types";
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
+
+async function request<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers ?? {}),
+    },
+    ...options,
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(detail || `Request failed with ${response.status}`);
+  }
+
+  return response.json() as Promise<T>;
+}
+
+export const api = {
+  resetDemoData: () =>
+    request<{ status: string; clinics: number; warehouses: number }>(
+      "/admin/reset-demo-data",
+      { method: "POST" },
+    ),
+  getClinics: () => request<Clinic[]>("/clinics"),
+  getClinic: (clinicId: string) => request<Clinic>(`/clinics/${clinicId}`),
+  updateClinic: (clinicId: string, update: ClinicUpdate) =>
+    request<Clinic>(`/clinics/${clinicId}`, {
+      method: "PATCH",
+      body: JSON.stringify(update),
+    }),
+  getWarehouses: () => request<Warehouse[]>("/warehouses"),
+  getWarehouse: (warehouseId: string) =>
+    request<Warehouse>(`/warehouses/${warehouseId}`),
+  getAgentRecommendation: (clinicId: string) =>
+    request<AgentRecommendation>(
+      `/clinics/${clinicId}/agent-recommendation`,
+    ),
+};
