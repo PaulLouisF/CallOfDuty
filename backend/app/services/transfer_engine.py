@@ -36,6 +36,17 @@ def create_transfer(
     client: Neo4jClient, clinic_id: str, source_id: str
 ) -> Transfer:
     def work(tx):
+        existing = tx.run(
+            """
+            MATCH (transfer:Transfer {status: 'ongoing'})
+                  -[:TRANSFER_TARGET]->(:Clinic {id: $clinic_id})
+            RETURN count(transfer) AS ongoing_count
+            """,
+            clinic_id=clinic_id,
+        ).single()
+        if existing and existing["ongoing_count"] > 0:
+            raise TransferError("An ongoing transfer already exists for this clinic.")
+
         record = tx.run(
             """
             MATCH (source:Warehouse {id: $source_id})

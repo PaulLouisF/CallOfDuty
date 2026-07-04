@@ -6,7 +6,9 @@ type AgentReasoningPanelProps = {
   transfers: Transfer[];
   loading: boolean;
   validatingSourceId: string | null;
-  onValidateTransfer: (sourceId: string) => Promise<void>;
+  actionMessage: string | null;
+  onValidateTransfer: (option: ResupplyOption) => Promise<void>;
+  onRejectTransfer: () => void;
 };
 
 export function AgentReasoningPanel({
@@ -14,7 +16,9 @@ export function AgentReasoningPanel({
   transfers,
   loading,
   validatingSourceId,
+  actionMessage,
   onValidateTransfer,
+  onRejectTransfer,
 }: AgentReasoningPanelProps) {
   if (loading) {
     return <div className="panel-muted">Loading recommendation...</div>;
@@ -24,23 +28,28 @@ export function AgentReasoningPanel({
     return <div className="panel-muted">Clinic recommendations appear here.</div>;
   }
 
-  const alternatives = recommendation.options.slice(1, 4);
-  const primaryOption = recommendation.options[0] ?? null;
+  const proposals = recommendation.options.slice(0, 3);
+  const ongoingForClinic = transfers.some(
+    (transfer) => transfer.target_clinic_id === recommendation.clinic_id,
+  );
 
   function TransferAction({ option }: { option: ResupplyOption }) {
     const disabled =
       option.source_type !== "warehouse" ||
       option.recommended_transfer_quantity <= 0 ||
+      ongoingForClinic ||
       validatingSourceId !== null;
 
     return (
       <button
         className="primary-button transfer-button"
         disabled={disabled}
-        onClick={() => onValidateTransfer(option.source_id)}
+        onClick={() => onValidateTransfer(option)}
         type="button"
       >
-        {validatingSourceId === option.source_id ? "Validating" : "Validate transfer"}
+        {validatingSourceId === option.source_id
+          ? "Validating"
+          : `Validate option ${option.rank}`}
       </button>
     );
   }
@@ -68,21 +77,6 @@ export function AgentReasoningPanel({
           <li key={reason}>{reason}</li>
         ))}
       </ul>
-
-      {primaryOption && recommendation.status !== "normal" && (
-        <article className="approval-card">
-          <div>
-            <p className="eyebrow">Validation</p>
-            <h3>
-              {primaryOption.source_name} • {primaryOption.recommended_transfer_quantity} kits
-            </h3>
-            <p>
-              {primaryOption.delivery_time_minutes} min • {primaryOption.road_status} route
-            </p>
-          </div>
-          <TransferAction option={primaryOption} />
-        </article>
-      )}
 
       {recommendation.llm_agent && (
         <section className="llm-agent-panel">
@@ -115,14 +109,26 @@ export function AgentReasoningPanel({
         </section>
       )}
 
-      {alternatives.length > 0 && (
+      {actionMessage && (
+        <article className="action-card">
+          <p className="eyebrow">Agent action</p>
+          <p>{actionMessage}</p>
+        </article>
+      )}
+
+      {proposals.length > 0 && recommendation.status !== "normal" && (
         <div className="space-y-2">
-          <p className="eyebrow">Alternatives</p>
-          {alternatives.map((option) => (
-            <article className="option-card" key={option.source_id}>
+          <p className="eyebrow">Proposals</p>
+          {ongoingForClinic && (
+            <div className="panel-note">
+              A transfer is already ongoing for this clinic, so new validations are paused.
+            </div>
+          )}
+          {proposals.map((option) => (
+            <article className="proposal-card" key={option.source_id}>
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3>{option.source_name}</h3>
+                  <h3>Option {option.rank}: {option.source_name}</h3>
                   <p>
                     {option.source_type} • {option.road_status} route •{" "}
                     {option.delivery_time_minutes} min
@@ -139,6 +145,24 @@ export function AgentReasoningPanel({
               <TransferAction option={option} />
             </article>
           ))}
+          <article className="proposal-card none-card">
+            <div>
+              <h3>None</h3>
+              <p>No transfer is launched. Warehouse stock stays unchanged.</p>
+            </div>
+            <ul className="reason-list compact-reasons">
+              <li>Choose this if the proposed routes should wait for human review.</li>
+              <li>The system will keep the deterministic recommendation visible.</li>
+            </ul>
+            <button
+              className="secondary-button transfer-button"
+              disabled={validatingSourceId !== null}
+              onClick={onRejectTransfer}
+              type="button"
+            >
+              Choose none
+            </button>
+          </article>
         </div>
       )}
 

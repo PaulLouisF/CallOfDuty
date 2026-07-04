@@ -31,6 +31,7 @@ export default function App() {
   const [validatingSourceId, setValidatingSourceId] = useState<string | null>(
     null,
   );
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const selectedClinicFromList = useMemo(
@@ -75,6 +76,7 @@ export default function App() {
     setError(null);
     setLoadingNode(true);
     setRecommendation(null);
+    setActionMessage(null);
 
     if (selected.type === "clinic") {
       api
@@ -108,6 +110,7 @@ export default function App() {
 
   async function handleResetDemoData() {
     setError(null);
+    setActionMessage(null);
     await api.resetDemoData();
     await loadCollections();
     setSelected({ type: "clinic", id: "clinic-b" });
@@ -118,6 +121,7 @@ export default function App() {
       return;
     }
     setError(null);
+    setActionMessage(null);
     const clinic = await api.updateClinic(selectedClinic.id, update);
     setSelectedClinic(clinic);
     const [clinicList, agent] = await Promise.all([
@@ -128,21 +132,24 @@ export default function App() {
     setRecommendation(agent);
   }
 
-  async function handleValidateTransfer(sourceId: string) {
+  async function handleValidateTransfer(option: AgentRecommendation["options"][number]) {
     if (!selectedClinic) {
       return;
     }
     const confirmed = window.confirm(
-      "Validate this warehouse transfer and reserve stock now?",
+      `Validate option ${option.rank}: reserve ${option.recommended_transfer_quantity} kits from ${option.source_name}?`,
     );
     if (!confirmed) {
       return;
     }
 
     setError(null);
-    setValidatingSourceId(sourceId);
+    setActionMessage(
+      `Agent selected option ${option.rank}: ${option.source_name}. Reasoning: ${option.reason}`,
+    );
+    setValidatingSourceId(option.source_id);
     try {
-      await api.createTransfer(selectedClinic.id, sourceId);
+      const transfer = await api.createTransfer(selectedClinic.id, option.source_id);
       const [clinic, clinicList, warehouseList, transferList, agent] =
         await Promise.all([
           api.getClinic(selectedClinic.id),
@@ -156,13 +163,25 @@ export default function App() {
       setWarehouses(warehouseList);
       setTransfers(transferList);
       setRecommendation(agent);
+      setActionMessage(
+        `Validated option ${option.rank}. Reserved ${transfer.quantity} kits from ${transfer.source_name}; transfer is now ongoing to ${transfer.target_clinic_name}.`,
+      );
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Unable to validate transfer.",
+      const message =
+        err instanceof Error ? err.message : "Unable to validate transfer.";
+      setError(message);
+      setActionMessage(
+        `Validation failed for option ${option.rank}. Reasoning: ${message}`,
       );
     } finally {
       setValidatingSourceId(null);
     }
+  }
+
+  function handleRejectTransfer() {
+    setActionMessage(
+      "No proposal was validated. The agent launched no transfer, so warehouse stock remains unchanged.",
+    );
   }
 
   return (
@@ -200,7 +219,9 @@ export default function App() {
           transfers={transfers}
           loading={loadingAgent}
           validatingSourceId={validatingSourceId}
+          actionMessage={actionMessage}
           onValidateTransfer={handleValidateTransfer}
+          onRejectTransfer={handleRejectTransfer}
         />
       </aside>
     </main>

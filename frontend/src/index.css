@@ -250,7 +250,8 @@ input {
   line-height: 1.38;
 }
 
-.option-card {
+.option-card,
+.proposal-card {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -261,6 +262,7 @@ input {
 }
 
 .option-card h3,
+.proposal-card h3,
 .approval-card h3,
 .transfer-card h3 {
   margin: 0;
@@ -270,6 +272,7 @@ input {
 }
 
 .option-card p,
+.proposal-card p,
 .approval-card p,
 .transfer-card p {
   margin: 4px 0 0;
@@ -301,6 +304,16 @@ input {
   gap: 5px;
   color: #202924;
   font-weight: 760;
+}
+
+.proposal-card {
+  border-color: #cbd8e8;
+  background: #f8fbff;
+}
+
+.none-card {
+  border-color: #ded6c6;
+  background: #fffdf7;
 }
 
 .approval-card,
@@ -338,6 +351,36 @@ input {
   font-size: 11px;
   font-weight: 820;
   text-transform: uppercase;
+}
+
+.action-card,
+.panel-note {
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.action-card {
+  border: 1px solid #b9d7ca;
+  color: #1f574b;
+  background: #f0fbf5;
+}
+
+.action-card p:last-child,
+.panel-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.36;
+}
+
+.panel-note {
+  border: 1px solid #f1d7a7;
+  color: #744d00;
+  background: #fff8e6;
+}
+
+.compact-reasons {
+  gap: 5px;
+  font-size: 12px;
 }
 
 .clinic-marker,
