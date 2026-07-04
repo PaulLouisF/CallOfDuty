@@ -1,5 +1,10 @@
 from app.models import AgentRecommendation, ResupplyOption
-from app.services.llm_agent import build_llm_payload, generate_critical_llm_note
+from app.config import get_settings
+from app.services.llm_agent import (
+    build_llm_payload,
+    generate_critical_llm_note,
+    parse_llm_response_content,
+)
 
 
 def critical_clinic():
@@ -83,6 +88,7 @@ def test_llm_note_only_appears_for_critical_clinics(monkeypatch):
 
 def test_critical_llm_note_reports_when_key_missing(monkeypatch):
     monkeypatch.setenv("LLM_API_KEY", "")
+    get_settings.cache_clear()
 
     note = generate_critical_llm_note(
         critical_clinic(), [warehouse_option()], deterministic_recommendation()
@@ -92,3 +98,34 @@ def test_critical_llm_note_reports_when_key_missing(monkeypatch):
     assert note.available is False
     assert "Set LLM_API_KEY" in note.proposed_action
     assert note.reasoning_summary == []
+    get_settings.cache_clear()
+
+
+def test_parse_llm_response_accepts_fenced_json():
+    parsed = parse_llm_response_content(
+        """```json
+{"reasoning_summary":["Uses warehouse route only."],"proposed_action":"Send kits from W1."}
+```"""
+    )
+
+    assert parsed.reasoning_summary == ["Uses warehouse route only."]
+    assert parsed.proposed_action == "Send kits from W1."
+
+
+def test_parse_llm_response_accepts_string_reasoning_summary():
+    parsed = parse_llm_response_content(
+        '{"reasoning_summary":"Uses warehouse route only.","proposed_action":"Send kits from W1."}'
+    )
+
+    assert parsed.reasoning_summary == ["Uses warehouse route only."]
+
+
+def test_parse_llm_response_accepts_object_proposed_action():
+    parsed = parse_llm_response_content(
+        (
+            '{"reasoning_summary":"Uses warehouse route only.",'
+            '"proposed_action":{"action":"Send kits from W1.","quantity":96}}'
+        )
+    )
+
+    assert parsed.proposed_action == "Send kits from W1."

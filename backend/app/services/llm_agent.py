@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 from openai import OpenAI
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ValidationError, field_validator
 
 from app.config import get_settings
 from app.models import AgentRecommendation, LLMAgentNote, ResupplyOption
@@ -13,6 +14,23 @@ from app.models import AgentRecommendation, LLMAgentNote, ResupplyOption
 class LLMResponse(BaseModel):
     reasoning_summary: list[str]
     proposed_action: str
+
+    @field_validator("reasoning_summary", mode="before")
+    @classmethod
+    def normalize_reasoning_summary(cls, value):
+        if isinstance(value, str):
+            return [value]
+        return value
+
+    @field_validator("proposed_action", mode="before")
+    @classmethod
+    def normalize_proposed_action(cls, value):
+        if isinstance(value, dict):
+            action = value.get("action")
+            if action:
+                return action
+            return json.dumps(value, separators=(",", ":"))
+        return value
 
 
 SYSTEM_PROMPT = """You are an Ebola test kit resupply agent.
@@ -65,6 +83,19 @@ def build_llm_payload(
     }
 
 
+def parse_llm_response_content(content: str) -> LLMResponse:
+    stripped = content.strip()
+    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", stripped, re.DOTALL)
+    if fenced:
+        stripped = fenced.group(1)
+    elif not stripped.startswith("{"):
+        start = stripped.find("{")
+        end = stripped.rfind("}")
+        if start != -1 and end != -1 and end > start:
+            stripped = stripped[start : end + 1]
+    return LLMResponse.model_validate_json(stripped)
+
+
 def unavailable_llm_note(reason: str, include_reason: bool = False) -> LLMAgentNote:
     return LLMAgentNote(
         available=False,
@@ -111,7 +142,7 @@ def generate_critical_llm_note(
             ],
         )
         content = completion.choices[0].message.content or "{}"
-        parsed = LLMResponse.model_validate_json(content)
+        parsed = parse_llm_response_content(content)
     except (ValidationError, json.JSONDecodeError, Exception):
         return unavailable_llm_note(
             "LLM agent could not generate a validated response. Deterministic recommendation remains the source of truth.",
