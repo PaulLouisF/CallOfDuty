@@ -1,14 +1,20 @@
 import { AlertTriangle, Route } from "lucide-react";
-import type { AgentRecommendation } from "../types";
+import type { AgentRecommendation, ResupplyOption, Transfer } from "../types";
 
 type AgentReasoningPanelProps = {
   recommendation: AgentRecommendation | null;
+  transfers: Transfer[];
   loading: boolean;
+  validatingSourceId: string | null;
+  onValidateTransfer: (sourceId: string) => Promise<void>;
 };
 
 export function AgentReasoningPanel({
   recommendation,
+  transfers,
   loading,
+  validatingSourceId,
+  onValidateTransfer,
 }: AgentReasoningPanelProps) {
   if (loading) {
     return <div className="panel-muted">Loading recommendation...</div>;
@@ -19,6 +25,25 @@ export function AgentReasoningPanel({
   }
 
   const alternatives = recommendation.options.slice(1, 4);
+  const primaryOption = recommendation.options[0] ?? null;
+
+  function TransferAction({ option }: { option: ResupplyOption }) {
+    const disabled =
+      option.source_type !== "warehouse" ||
+      option.recommended_transfer_quantity <= 0 ||
+      validatingSourceId !== null;
+
+    return (
+      <button
+        className="primary-button transfer-button"
+        disabled={disabled}
+        onClick={() => onValidateTransfer(option.source_id)}
+        type="button"
+      >
+        {validatingSourceId === option.source_id ? "Validating" : "Validate transfer"}
+      </button>
+    );
+  }
 
   return (
     <section className="panel-section">
@@ -43,6 +68,21 @@ export function AgentReasoningPanel({
           <li key={reason}>{reason}</li>
         ))}
       </ul>
+
+      {primaryOption && recommendation.status !== "normal" && (
+        <article className="approval-card">
+          <div>
+            <p className="eyebrow">Validation</p>
+            <h3>
+              {primaryOption.source_name} • {primaryOption.recommended_transfer_quantity} kits
+            </h3>
+            <p>
+              {primaryOption.delivery_time_minutes} min • {primaryOption.road_status} route
+            </p>
+          </div>
+          <TransferAction option={primaryOption} />
+        </article>
+      )}
 
       {recommendation.llm_agent && (
         <section className="llm-agent-panel">
@@ -95,6 +135,27 @@ export function AgentReasoningPanel({
                   <Route size={14} /> {option.recommended_transfer_quantity} kits
                 </span>
                 <span>{option.reason}</span>
+              </div>
+              <TransferAction option={option} />
+            </article>
+          ))}
+        </div>
+      )}
+
+      {transfers.length > 0 && (
+        <div className="space-y-2">
+          <p className="eyebrow">Transfers ongoing</p>
+          {transfers.map((transfer) => (
+            <article className="transfer-card" key={transfer.id}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3>{transfer.quantity} kits to {transfer.target_clinic_name}</h3>
+                  <p>
+                    {transfer.source_name} • {transfer.delivery_time_minutes} min •{" "}
+                    {transfer.road_status} route
+                  </p>
+                </div>
+                <span className="transfer-status">{transfer.status}</span>
               </div>
             </article>
           ))}

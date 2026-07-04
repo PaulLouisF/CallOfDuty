@@ -260,14 +260,18 @@ input {
   background: #ffffff;
 }
 
-.option-card h3 {
+.option-card h3,
+.approval-card h3,
+.transfer-card h3 {
   margin: 0;
   color: #1d2722;
   font-size: 14px;
   font-weight: 780;
 }
 
-.option-card p {
+.option-card p,
+.approval-card p,
+.transfer-card p {
   margin: 4px 0 0;
   color: #6b6254;
   font-size: 12px;
@@ -297,6 +301,43 @@ input {
   gap: 5px;
   color: #202924;
   font-weight: 760;
+}
+
+.approval-card,
+.transfer-card {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.approval-card {
+  border: 1px solid #b9d7ca;
+  background: #f0fbf5;
+}
+
+.transfer-card {
+  border: 1px solid #d8d2c4;
+  background: #ffffff;
+}
+
+.transfer-button {
+  min-height: 34px;
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 13px;
+}
+
+.transfer-status {
+  flex: none;
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: #1f574b;
+  background: #effaf5;
+  font-size: 11px;
+  font-weight: 820;
+  text-transform: uppercase;
 }
 
 .clinic-marker,

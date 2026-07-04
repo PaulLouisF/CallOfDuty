@@ -3,6 +3,7 @@ import type {
   Clinic,
   ClinicUpdate,
   SupplyLink,
+  Transfer,
   Warehouse,
 } from "../types";
 
@@ -44,6 +45,13 @@ export const api = {
     }),
   getWarehouses: () => request<Warehouse[]>("/warehouses"),
   getSupplyLinks: () => request<SupplyLink[]>("/supply-links"),
+  getTransfers: (status = "ongoing") =>
+    request<Transfer[]>(`/transfers?status=${encodeURIComponent(status)}`),
+  createTransfer: (clinicId: string, sourceId: string) =>
+    request<Transfer>(`/clinics/${clinicId}/transfers`, {
+      method: "POST",
+      body: JSON.stringify({ source_id: sourceId }),
+    }),
   getWarehouse: (warehouseId: string) =>
     request<Warehouse>(`/warehouses/${warehouseId}`),
   getAgentRecommendation: (clinicId: string) =>

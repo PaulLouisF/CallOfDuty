@@ -99,8 +99,14 @@ PATCH /warehouses/{warehouse_id}
 GET  /supply-links
 GET  /clinics/{clinic_id}/resupply-options
 GET  /clinics/{clinic_id}/agent-recommendation
+POST /clinics/{clinic_id}/transfers
+GET  /transfers
 GET  /alerts
 ```
+
+Approving a transfer reserves stock immediately by decrementing the selected
+warehouse and creates an `ongoing` transfer record. Clinic stock is not
+increased until a future completion workflow is added.
 
 ## Demo Checks
 

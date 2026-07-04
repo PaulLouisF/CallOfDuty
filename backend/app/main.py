@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.neo4j_client import neo4j_client
-from app.routes import admin, clinics, graph, warehouses
+from app.routes import admin, clinics, graph, transfers, warehouses
 
 settings = get_settings()
 
@@ -23,6 +23,7 @@ app.add_middleware(
 app.include_router(admin.router)
 app.include_router(clinics.router)
 app.include_router(graph.router)
+app.include_router(transfers.router)
 app.include_router(warehouses.router)
 
 

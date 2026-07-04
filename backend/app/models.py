@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 RiskLevel = Literal["normal", "medium", "high", "critical"]
 RoadStatus = Literal["open", "slow", "blocked", "unknown"]
 SourceType = Literal["warehouse", "clinic"]
+TransferStatus = Literal["ongoing", "completed", "cancelled"]
 
 
 class ClinicBase(BaseModel):
@@ -101,6 +102,24 @@ class SupplyLink(BaseModel):
     delivery_time_minutes: int
     road_status: RoadStatus
     max_transfer_kits: Optional[int] = None
+
+
+class TransferCreate(BaseModel):
+    source_id: str
+
+
+class Transfer(BaseModel):
+    id: str
+    status: TransferStatus
+    source_id: str
+    source_name: str
+    target_clinic_id: str
+    target_clinic_name: str
+    quantity: int = Field(gt=0)
+    delivery_time_minutes: int
+    road_status: RoadStatus
+    created_at: str
+    updated_at: str
 
 
 class Alert(BaseModel):

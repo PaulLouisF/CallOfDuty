@@ -10,6 +10,7 @@ import type {
   ClinicUpdate,
   Selection,
   SupplyLink,
+  Transfer,
   Warehouse,
 } from "./types";
 
@@ -17,6 +18,7 @@ export default function App() {
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [supplyLinks, setSupplyLinks] = useState<SupplyLink[]>([]);
+  const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [selected, setSelected] = useState<Selection | null>(null);
   const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null);
   const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse | null>(
@@ -26,6 +28,9 @@ export default function App() {
     useState<AgentRecommendation | null>(null);
   const [loadingNode, setLoadingNode] = useState(false);
   const [loadingAgent, setLoadingAgent] = useState(false);
+  const [validatingSourceId, setValidatingSourceId] = useState<string | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
 
   const selectedClinicFromList = useMemo(
@@ -37,14 +42,16 @@ export default function App() {
   );
 
   const loadCollections = useCallback(async () => {
-    const [clinicList, warehouseList, linkList] = await Promise.all([
+    const [clinicList, warehouseList, linkList, transferList] = await Promise.all([
       api.getClinics(),
       api.getWarehouses(),
       api.getSupplyLinks(),
+      api.getTransfers(),
     ]);
     setClinics(clinicList);
     setWarehouses(warehouseList);
     setSupplyLinks(linkList);
+    setTransfers(transferList);
   }, []);
 
   useEffect(() => {
@@ -121,6 +128,43 @@ export default function App() {
     setRecommendation(agent);
   }
 
+  async function handleValidateTransfer(sourceId: string) {
+    if (!selectedClinic) {
+      return;
+    }
+    const confirmed = window.confirm(
+      "Validate this warehouse transfer and reserve stock now?",
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setError(null);
+    setValidatingSourceId(sourceId);
+    try {
+      await api.createTransfer(selectedClinic.id, sourceId);
+      const [clinic, clinicList, warehouseList, transferList, agent] =
+        await Promise.all([
+          api.getClinic(selectedClinic.id),
+          api.getClinics(),
+          api.getWarehouses(),
+          api.getTransfers(),
+          api.getAgentRecommendation(selectedClinic.id),
+        ]);
+      setSelectedClinic(clinic);
+      setClinics(clinicList);
+      setWarehouses(warehouseList);
+      setTransfers(transferList);
+      setRecommendation(agent);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to validate transfer.",
+      );
+    } finally {
+      setValidatingSourceId(null);
+    }
+  }
+
   return (
     <main className="app-shell">
       <section className="map-panel">
@@ -153,7 +197,10 @@ export default function App() {
         />
         <AgentReasoningPanel
           recommendation={recommendation}
+          transfers={transfers}
           loading={loadingAgent}
+          validatingSourceId={validatingSourceId}
+          onValidateTransfer={handleValidateTransfer}
         />
       </aside>
     </main>
