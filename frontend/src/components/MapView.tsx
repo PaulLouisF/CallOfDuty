@@ -134,9 +134,6 @@ export function MapView({
         <span>
           <i className="legend-route warehouse-route"></i> Warehouse route
         </span>
-        <span>
-          <i className="legend-route clinic-route"></i> Clinic support
-        </span>
       </div>
     </div>
   );

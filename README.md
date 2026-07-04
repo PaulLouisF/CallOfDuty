@@ -10,9 +10,9 @@ The backend owns all operational calculations:
 - risk level
 - ranked resupply options from warehouses and connected clinics
 
-The frontend displays a Leaflet map, warehouse and clinic markers, Neo4j supply
-routes, selected node details, clinic update form, and agent reasoning from
-backend data.
+The frontend displays a Leaflet map, warehouse and clinic markers, Neo4j
+warehouse supply routes, selected node details, clinic update form, and
+deterministic agent reasoning from backend data.
 
 ## Structure
 
@@ -52,19 +52,9 @@ Seed demo data:
 curl -X POST http://127.0.0.1:8000/admin/reset-demo-data
 ```
 
-Optional Mistral LLM agent:
-
-```bash
-export LLM_API_KEY=your_mistral_key
-export LLM_BASE_URL=https://api.mistral.ai/v1
-export LLM_MODEL=mistral-small-latest
-```
-
-The backend uses the OpenAI-compatible chat completions interface. The model is
-given only a JSON payload built from Neo4j clinic/warehouse nodes, Neo4j
-`CAN_SUPPLY` relationships, and deterministic backend calculations. If
-`LLM_API_KEY` is not set or the provider call fails, the API returns the
-deterministic explanation.
+The agent endpoint is deterministic. When a clinic is high or critical risk,
+it proposes a solution using only Neo4j warehouse-to-clinic `CAN_SUPPLY`
+relationships. Clinic-to-clinic stock is intentionally excluded.
 
 Run the frontend:
 

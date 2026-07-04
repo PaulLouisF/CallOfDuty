@@ -4,12 +4,7 @@ from typing import Any
 
 from app.models import AgentRecommendation, ResupplyOption
 from app.neo4j_client import Neo4jClient
-from app.services.llm_agent import generate_llm_explanation
-from app.services.risk_engine import (
-    calculate_operations_remaining_hours,
-    calculate_risk_level,
-    recommended_transfer_quantity,
-)
+from app.services.risk_engine import recommended_transfer_quantity
 
 
 SAFE_ROAD_STATUSES = {"open", "slow"}
@@ -33,9 +28,9 @@ def get_resupply_options(
         needed = recommended_transfer_quantity(target)
         result = tx.run(
             """
-            MATCH (source)-[route:CAN_SUPPLY]->(target:Clinic {id: $clinic_id})
+            MATCH (source:Warehouse)-[route:CAN_SUPPLY]->(target:Clinic {id: $clinic_id})
             WHERE route.road_status IN $road_statuses
-            RETURN labels(source) AS labels, source, route
+            RETURN source, route
             """,
             clinic_id=clinic_id,
             road_statuses=sorted(SAFE_ROAD_STATUSES),
@@ -44,13 +39,7 @@ def get_resupply_options(
         for record in result:
             source = dict(record["source"])
             route = dict(record["route"])
-            labels = set(record["labels"])
-            source_type = "warehouse" if "Warehouse" in labels else "clinic"
-            available_stock = (
-                source["test_kits_stock"]
-                if source_type == "warehouse"
-                else source["test_kits_available"]
-            )
+            available_stock = source["test_kits_stock"]
             route_limit = route.get("max_transfer_kits")
             route_cap = available_stock
             if route_limit is not None:
@@ -60,19 +49,6 @@ def get_resupply_options(
             remaining_stock = available_stock - transfer
             supplier_ops_after = None
             is_safe_for_supplier = True
-            if source_type == "clinic":
-                supplier_ops_after = calculate_operations_remaining_hours(
-                    remaining_stock, source["nurses_available"]
-                )
-                supplier_risk = calculate_risk_level(
-                    test_kits_available=remaining_stock,
-                    people_waiting=source["people_waiting"],
-                    nurses_available=source["nurses_available"],
-                    threshold_min_kits=source["threshold_min_kits"],
-                    operations_remaining_hours=supplier_ops_after,
-                    queue_delay_hours=source["queue_delay_hours"],
-                )
-                is_safe_for_supplier = supplier_risk not in {"high", "critical"}
 
             can_fully_supply = needed == 0 or transfer >= needed
             reason_parts = []
@@ -84,16 +60,13 @@ def get_resupply_options(
                 reason_parts.append("Can provide only a partial transfer.")
             if route["road_status"] == "slow":
                 reason_parts.append("Route is slow but usable.")
-            if source_type == "clinic" and not is_safe_for_supplier:
-                reason_parts.append("Transfer would weaken the supplying clinic.")
-            if source_type == "warehouse":
-                reason_parts.append("Warehouse supply avoids reducing another clinic's stock.")
+            reason_parts.append("Warehouse supply avoids using another clinic's stock.")
 
             options.append(
                 {
                     "source_id": source["id"],
                     "source_name": source["name"],
-                    "source_type": source_type,
+                    "source_type": "warehouse",
                     "available_stock": available_stock,
                     "delivery_time_minutes": route["delivery_time_minutes"],
                     "road_status": route["road_status"],
@@ -109,9 +82,7 @@ def get_resupply_options(
         options.sort(
             key=lambda option: (
                 not option["can_fully_supply"],
-                not option["is_safe_for_supplier"],
                 option["delivery_time_minutes"],
-                0 if option["source_type"] == "warehouse" else 1,
                 option["available_stock"] * -1,
             )
         )
@@ -138,6 +109,14 @@ def get_agent_recommendation(
 
     options = get_resupply_options(client, clinic_id)
     best = options[0] if options else None
+    needs_resupply = (
+        clinic["risk_level"] in {"critical", "high"}
+        or clinic["test_kits_available"] < clinic["threshold_min_kits"]
+        or (
+            clinic["operations_remaining_hours"] is not None
+            and clinic["operations_remaining_hours"] < 2
+        )
+    )
     reasoning = [
         f"{clinic['name']} is {clinic['risk_level']} risk.",
         (
@@ -153,21 +132,34 @@ def get_agent_recommendation(
     ]
     if clinic["test_kits_available"] < clinic["threshold_min_kits"]:
         reasoning.append("Current stock is below the clinic's minimum threshold.")
-    if best:
+    if needs_resupply and best:
         reasoning.append(
-            f"{best.source_name} is ranked first: {best.reason}"
+            f"{best.source_name} is the best warehouse option from Neo4j supply routes: {best.reason}"
+        )
+        reasoning.append(
+            "Clinic-to-clinic stock is excluded from this recommendation policy."
         )
         recommendation = (
             f"Resupply {clinic['name']} from {best.source_name} with "
             f"{best.recommended_transfer_quantity} test kits. Estimated delivery time: "
             f"{best.delivery_time_minutes} minutes."
         )
+    elif needs_resupply:
+        recommendation = (
+            f"No open or slow warehouse supply route is available for {clinic['name']}."
+        )
+        reasoning.append(
+            "No usable warehouse route was found in Neo4j for this clinic."
+        )
     else:
         recommendation = (
-            f"No open or slow supply route is available for {clinic['name']}."
+            f"No immediate warehouse resupply is required for {clinic['name']}."
+        )
+        reasoning.append(
+            "The clinic is not currently high or critical risk, so no resupply action is proposed."
         )
 
-    fallback = AgentRecommendation(
+    return AgentRecommendation(
         clinic_id=clinic["id"],
         clinic=clinic["name"],
         status=clinic["risk_level"],
@@ -181,7 +173,6 @@ def get_agent_recommendation(
             "neo4j:Warehouse",
             "neo4j:CAN_SUPPLY",
             "backend:risk_engine",
-            "backend:recommendation_engine",
+            "backend:recommendation_engine:warehouse_only",
         ],
     )
-    return generate_llm_explanation(clinic, options, fallback)

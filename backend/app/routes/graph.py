@@ -11,15 +11,14 @@ def list_supply_links(client: Neo4jClient = Depends(get_neo4j_client)):
     def work(tx):
         result = tx.run(
             """
-            MATCH (source)-[route:CAN_SUPPLY]->(target:Clinic)
+            MATCH (source:Warehouse)-[route:CAN_SUPPLY]->(target:Clinic)
             WHERE route.road_status IN ['open', 'slow']
-            RETURN labels(source) AS labels, source, route, target
+            RETURN source, route, target
             ORDER BY route.delivery_time_minutes ASC
             """
         )
         links = []
         for record in result:
-            labels = set(record["labels"])
             source = dict(record["source"])
             route = dict(record["route"])
             target = dict(record["target"])
@@ -27,9 +26,7 @@ def list_supply_links(client: Neo4jClient = Depends(get_neo4j_client)):
                 {
                     "source_id": source["id"],
                     "source_name": source["name"],
-                    "source_type": (
-                        "warehouse" if "Warehouse" in labels else "clinic"
-                    ),
+                    "source_type": "warehouse",
                     "source_latitude": source["latitude"],
                     "source_longitude": source["longitude"],
                     "target_id": target["id"],

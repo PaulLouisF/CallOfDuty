@@ -367,7 +367,7 @@ input {
   bottom: 22px;
   z-index: 500;
   display: grid;
-  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  grid-template-columns: repeat(3, minmax(110px, 1fr));
   gap: 7px 12px;
   max-width: min(92%, 430px);
   border: 1px solid #d8d2c4;
@@ -413,10 +413,6 @@ input {
 
 .warehouse-route {
   border-color: #315b87;
-}
-
-.clinic-route {
-  border-color: #1f6b59;
 }
 
 .agent-source {
