@@ -65,12 +65,12 @@ def build_llm_payload(
     }
 
 
-def unavailable_llm_note(reason: str) -> LLMAgentNote:
+def unavailable_llm_note(reason: str, include_reason: bool = False) -> LLMAgentNote:
     return LLMAgentNote(
         available=False,
         provider="mistral-openai-compatible",
         proposed_action=reason,
-        reasoning_summary=[reason],
+        reasoning_summary=[reason] if include_reason else [],
         data_sources=[
             "neo4j:Clinic",
             "neo4j:Warehouse",
@@ -91,7 +91,7 @@ def generate_critical_llm_note(
     settings = get_settings()
     if not settings.llm_api_key:
         return unavailable_llm_note(
-            "LLM agent is not configured. Set LLM_API_KEY to enable the critical-case agent note."
+            "Set LLM_API_KEY to enable the critical-case LLM agent."
         )
 
     payload = build_llm_payload(clinic, options, deterministic)
@@ -114,7 +114,8 @@ def generate_critical_llm_note(
         parsed = LLMResponse.model_validate_json(content)
     except (ValidationError, json.JSONDecodeError, Exception):
         return unavailable_llm_note(
-            "LLM agent could not generate a validated response. Deterministic recommendation remains the source of truth."
+            "LLM agent could not generate a validated response. Deterministic recommendation remains the source of truth.",
+            include_reason=True,
         )
 
     return LLMAgentNote(

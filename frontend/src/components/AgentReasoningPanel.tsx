@@ -65,11 +65,13 @@ export function AgentReasoningPanel({
               ? ` (${recommendation.llm_agent.model})`
               : ""}
           </div>
-          <ul className="reason-list">
-            {recommendation.llm_agent.reasoning_summary.map((reason) => (
-              <li key={reason}>{reason}</li>
-            ))}
-          </ul>
+          {recommendation.llm_agent.reasoning_summary.length > 0 && (
+            <ul className="reason-list">
+              {recommendation.llm_agent.reasoning_summary.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          )}
         </section>
       )}
 

@@ -91,3 +91,4 @@ def test_critical_llm_note_reports_when_key_missing(monkeypatch):
     assert note is not None
     assert note.available is False
     assert "Set LLM_API_KEY" in note.proposed_action
+    assert note.reasoning_summary == []
