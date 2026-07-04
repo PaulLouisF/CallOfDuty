@@ -1,10 +1,11 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
-import type { Clinic, Selection, Warehouse } from "../types";
+import type { Clinic, Selection, SupplyLink, Warehouse } from "../types";
 
 type MapViewProps = {
   clinics: Clinic[];
   warehouses: Warehouse[];
+  supplyLinks: SupplyLink[];
   selected: Selection | null;
   onSelect: (selection: Selection) => void;
 };
@@ -19,6 +20,7 @@ const RISK_CLASS: Record<Clinic["risk_level"], string> = {
 export function MapView({
   clinics,
   warehouses,
+  supplyLinks,
   selected,
   onSelect,
 }: MapViewProps) {
@@ -61,6 +63,27 @@ export function MapView({
 
     layer.clearLayers();
 
+    supplyLinks.forEach((link) => {
+      const touchesSelection =
+        selected?.id === link.source_id || selected?.id === link.target_id;
+      const isWarehouseRoute = link.source_type === "warehouse";
+      const line = L.polyline(
+        [
+          [link.source_latitude, link.source_longitude],
+          [link.target_latitude, link.target_longitude],
+        ],
+        {
+          color: isWarehouseRoute ? "#315b87" : "#1f6b59",
+          dashArray: link.road_status === "slow" ? "8 7" : undefined,
+          opacity: touchesSelection ? 0.95 : 0.34,
+          weight: touchesSelection ? 4 : 2,
+        },
+      ).bindTooltip(
+        `${link.source_name} -> ${link.target_name}: ${link.delivery_time_minutes} min, ${link.road_status}`,
+      );
+      line.addTo(layer);
+    });
+
     clinics.forEach((clinic) => {
       const isSelected =
         selected?.type === "clinic" && selected.id === clinic.id;
@@ -86,9 +109,9 @@ export function MapView({
           className: "",
           html: `<span class="warehouse-marker ${
             isSelected ? "marker-selected" : ""
-          }"><span>${warehouse.test_kits_stock}</span></span>`,
-          iconSize: [34, 34],
-          iconAnchor: [17, 17],
+          }"><span>WH</span><small>${warehouse.test_kits_stock}</small></span>`,
+          iconSize: [46, 38],
+          iconAnchor: [23, 19],
         }),
       }).bindTooltip(warehouse.name);
       marker.on("click", () =>
@@ -96,7 +119,25 @@ export function MapView({
       );
       marker.addTo(layer);
     });
-  }, [clinics, warehouses, selected, onSelect]);
+  }, [clinics, warehouses, supplyLinks, selected, onSelect]);
 
-  return <div ref={containerRef} className="h-full min-h-[420px] w-full" />;
+  return (
+    <div className="relative h-full min-h-[420px] w-full">
+      <div ref={containerRef} className="h-full min-h-[420px] w-full" />
+      <div className="map-legend">
+        <span>
+          <i className="legend-clinic"></i> Clinic risk
+        </span>
+        <span>
+          <i className="legend-warehouse"></i> Warehouse
+        </span>
+        <span>
+          <i className="legend-route warehouse-route"></i> Warehouse route
+        </span>
+        <span>
+          <i className="legend-route clinic-route"></i> Clinic support
+        </span>
+      </div>
+    </div>
+  );
 }

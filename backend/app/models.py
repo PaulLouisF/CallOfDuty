@@ -71,6 +71,26 @@ class AgentRecommendation(BaseModel):
     reasoning: list[str]
     recommendation: str
     options: list[ResupplyOption]
+    llm_used: bool = False
+    llm_provider: str = "deterministic"
+    llm_model: Optional[str] = None
+    data_sources: list[str] = Field(default_factory=list)
+
+
+class SupplyLink(BaseModel):
+    source_id: str
+    source_name: str
+    source_type: SourceType
+    source_latitude: float
+    source_longitude: float
+    target_id: str
+    target_name: str
+    target_type: Literal["clinic"]
+    target_latitude: float
+    target_longitude: float
+    delivery_time_minutes: int
+    road_status: RoadStatus
+    max_transfer_kits: Optional[int] = None
 
 
 class Alert(BaseModel):

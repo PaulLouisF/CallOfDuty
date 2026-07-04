@@ -4,6 +4,7 @@ from typing import Any
 
 from app.models import AgentRecommendation, ResupplyOption
 from app.neo4j_client import Neo4jClient
+from app.services.llm_agent import generate_llm_explanation
 from app.services.risk_engine import (
     calculate_operations_remaining_hours,
     calculate_risk_level,
@@ -166,11 +167,21 @@ def get_agent_recommendation(
             f"No open or slow supply route is available for {clinic['name']}."
         )
 
-    return AgentRecommendation(
+    fallback = AgentRecommendation(
         clinic_id=clinic["id"],
         clinic=clinic["name"],
         status=clinic["risk_level"],
         reasoning=reasoning,
         recommendation=recommendation,
         options=options,
+        llm_used=False,
+        llm_provider="deterministic",
+        data_sources=[
+            "neo4j:Clinic",
+            "neo4j:Warehouse",
+            "neo4j:CAN_SUPPLY",
+            "backend:risk_engine",
+            "backend:recommendation_engine",
+        ],
     )
+    return generate_llm_explanation(clinic, options, fallback)

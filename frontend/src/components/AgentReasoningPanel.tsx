@@ -32,6 +32,12 @@ export function AgentReasoningPanel({
         </div>
       </div>
 
+      <div className="agent-source">
+        {recommendation.llm_used
+          ? `LLM: ${recommendation.llm_provider} (${recommendation.llm_model})`
+          : "Deterministic backend explanation"}
+      </div>
+
       <ul className="reason-list">
         {recommendation.reasoning.map((reason) => (
           <li key={reason}>{reason}</li>

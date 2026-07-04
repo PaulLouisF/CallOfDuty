@@ -2,6 +2,7 @@ import type {
   AgentRecommendation,
   Clinic,
   ClinicUpdate,
+  SupplyLink,
   Warehouse,
 } from "../types";
 
@@ -42,6 +43,7 @@ export const api = {
       body: JSON.stringify(update),
     }),
   getWarehouses: () => request<Warehouse[]>("/warehouses"),
+  getSupplyLinks: () => request<SupplyLink[]>("/supply-links"),
   getWarehouse: (warehouseId: string) =>
     request<Warehouse>(`/warehouses/${warehouseId}`),
   getAgentRecommendation: (clinicId: string) =>

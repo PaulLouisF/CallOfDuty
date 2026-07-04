@@ -26,6 +26,22 @@ export type Warehouse = {
   last_updated_at: string;
 };
 
+export type SupplyLink = {
+  source_id: string;
+  source_name: string;
+  source_type: "warehouse" | "clinic";
+  source_latitude: number;
+  source_longitude: number;
+  target_id: string;
+  target_name: string;
+  target_type: "clinic";
+  target_latitude: number;
+  target_longitude: number;
+  delivery_time_minutes: number;
+  road_status: "open" | "slow" | "blocked" | "unknown";
+  max_transfer_kits: number | null;
+};
+
 export type ResupplyOption = {
   source_id: string;
   source_name: string;
@@ -49,6 +65,10 @@ export type AgentRecommendation = {
   reasoning: string[];
   recommendation: string;
   options: ResupplyOption[];
+  llm_used: boolean;
+  llm_provider: string;
+  llm_model: string | null;
+  data_sources: string[];
 };
 
 export type Selection =

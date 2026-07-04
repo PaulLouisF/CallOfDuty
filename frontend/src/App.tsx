@@ -9,12 +9,14 @@ import type {
   Clinic,
   ClinicUpdate,
   Selection,
+  SupplyLink,
   Warehouse,
 } from "./types";
 
 export default function App() {
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [supplyLinks, setSupplyLinks] = useState<SupplyLink[]>([]);
   const [selected, setSelected] = useState<Selection | null>(null);
   const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null);
   const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse | null>(
@@ -35,12 +37,14 @@ export default function App() {
   );
 
   const loadCollections = useCallback(async () => {
-    const [clinicList, warehouseList] = await Promise.all([
+    const [clinicList, warehouseList, linkList] = await Promise.all([
       api.getClinics(),
       api.getWarehouses(),
+      api.getSupplyLinks(),
     ]);
     setClinics(clinicList);
     setWarehouses(warehouseList);
+    setSupplyLinks(linkList);
   }, []);
 
   useEffect(() => {
@@ -134,6 +138,7 @@ export default function App() {
         <MapView
           clinics={clinics}
           warehouses={warehouses}
+          supplyLinks={supplyLinks}
           selected={selected}
           onSelect={setSelected}
         />
