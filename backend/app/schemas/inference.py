@@ -32,3 +32,20 @@ class ImageIngestionResponse(BaseModel):
 
 class AudioIngestionResponse(ImageIngestionResponse):
     transcript: str
+
+
+class VoiceAgentDecision(BaseModel):
+    language: str
+    action: str
+    reasoning: list[str]
+    neo4j_schema: dict[str, list[str]]
+    cypher: str | None = None
+    parameters: dict[str, int | str] | None = None
+
+
+class VoiceUpdateResponse(BaseModel):
+    transcript: str
+    agent_decision: VoiceAgentDecision
+    observations: list[Observation]
+    clinic: Clinic
+    recommendation: AgentRecommendation

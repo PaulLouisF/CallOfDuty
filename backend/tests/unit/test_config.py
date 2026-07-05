@@ -21,3 +21,10 @@ def test_crusoe_settings_have_exact_safe_defaults():
 def test_application_can_start_without_crusoe_key():
     settings = Settings(neo4j_password="password", _env_file=None)
     assert settings.crusoe_api_key == ""
+
+
+def test_application_can_start_without_gradium_key():
+    settings = Settings(neo4j_password="password", _env_file=None)
+    assert settings.gradium_api_key == ""
+    assert settings.gradium_base_url == "https://api.gradium.ai/api"
+    assert settings.gradium_stt_language == "en"

@@ -11,6 +11,7 @@ import type {
   ObservationSourceType,
   ObservationStatus,
   SituationBriefing,
+  VoiceUpdateResponse,
 } from "../types";
 
 const API_BASE_URL =
@@ -77,6 +78,14 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify(update),
     }),
+  voiceUpdate: (clinicId: string, file: File) => {
+    const body = new FormData();
+    body.append("file", file);
+    return request<VoiceUpdateResponse>(`/clinics/${clinicId}/voice-update`, {
+      method: "POST",
+      body,
+    });
+  },
   getWarehouses: () => request<Warehouse[]>("/warehouses"),
   getSupplyLinks: () => request<SupplyLink[]>("/supply-links"),
   getTransfers: (status = "ongoing") =>

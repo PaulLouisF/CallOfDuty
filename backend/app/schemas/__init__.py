@@ -29,6 +29,8 @@ from .inference import (
     ImageExtractionResult,
     ImageIngestionResponse,
     ProviderMetadata,
+    VoiceAgentDecision,
+    VoiceUpdateResponse,
 )
 from .diagnostics import CrusoeDiagnostic, Neo4jDiagnostic
 from .observations import (

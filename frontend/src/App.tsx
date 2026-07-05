@@ -17,6 +17,8 @@ import type {
   Warehouse,
 } from "./types";
 
+const GRAPH_REFRESH_INTERVAL_MS = 5000;
+
 export default function App() {
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -60,6 +62,54 @@ export default function App() {
     setTransfers(transferList);
   }, []);
 
+  const refreshSelectedSite = useCallback(
+    async (
+      selection: Selection | null,
+      options: { showLoading?: boolean; reportError?: boolean } = {},
+    ) => {
+      const { showLoading = false, reportError = false } = options;
+      if (!selection) {
+        setSelectedClinic(null);
+        setSelectedWarehouse(null);
+        setRecommendation(null);
+        return;
+      }
+
+      if (showLoading) {
+        setLoadingNode(true);
+        setLoadingAgent(selection.type === "clinic");
+      }
+
+      try {
+        if (selection.type === "clinic") {
+          const [clinic, agent] = await Promise.all([
+            api.getClinic(selection.id),
+            api.getAgentRecommendation(selection.id),
+          ]);
+          setSelectedClinic(clinic);
+          setSelectedWarehouse(null);
+          setRecommendation(agent);
+          return;
+        }
+
+        const warehouse = await api.getWarehouse(selection.id);
+        setSelectedWarehouse(warehouse);
+        setSelectedClinic(null);
+        setRecommendation(null);
+      } catch (err) {
+        if (reportError) {
+          setError(err instanceof Error ? err.message : "Unable to refresh site.");
+        }
+      } finally {
+        if (showLoading) {
+          setLoadingNode(false);
+          setLoadingAgent(false);
+        }
+      }
+    },
+    [],
+  );
+
   useEffect(() => {
     loadCollections().catch((err) => {
       setError(
@@ -71,47 +121,47 @@ export default function App() {
   }, [loadCollections]);
 
   useEffect(() => {
-    if (!selected) {
-      setSelectedClinic(null);
-      setSelectedWarehouse(null);
-      setRecommendation(null);
-      return;
-    }
-
     setError(null);
-    setLoadingNode(true);
-    setRecommendation(null);
     setActionMessage(null);
+    refreshSelectedSite(selected, { showLoading: true, reportError: true });
+  }, [refreshSelectedSite, selected]);
 
-    if (selected.type === "clinic") {
-      api
-        .getClinic(selected.id)
-        .then((clinic) => {
-          setSelectedClinic(clinic);
-          setSelectedWarehouse(null);
-        })
-        .catch((err) => setError(err.message))
-        .finally(() => setLoadingNode(false));
+  useEffect(() => {
+    let inFlight = false;
 
-      setLoadingAgent(true);
-      api
-        .getAgentRecommendation(selected.id)
-        .then(setRecommendation)
-        .catch((err) => setError(err.message))
-        .finally(() => setLoadingAgent(false));
-      return;
+    async function refreshGraphData() {
+      if (document.hidden || inFlight) {
+        return;
+      }
+      inFlight = true;
+      try {
+        await loadCollections();
+        await refreshSelectedSite(selected);
+        setObservationRefreshKey((value) => value + 1);
+      } catch {
+        // Keep the last known graph visible during transient refresh failures.
+      } finally {
+        inFlight = false;
+      }
     }
 
-    api
-      .getWarehouse(selected.id)
-      .then((warehouse) => {
-        setSelectedWarehouse(warehouse);
-        setSelectedClinic(null);
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoadingNode(false));
-    setLoadingAgent(false);
-  }, [selected]);
+    function handleVisibilityChange() {
+      if (!document.hidden) {
+        refreshGraphData();
+      }
+    }
+
+    const intervalId = window.setInterval(
+      refreshGraphData,
+      GRAPH_REFRESH_INTERVAL_MS,
+    );
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [loadCollections, refreshSelectedSite, selected]);
 
   useEffect(() => {
     if (!isSiteModalOpen) {
@@ -146,10 +196,7 @@ export default function App() {
     await loadCollections();
     setObservationRefreshKey((value) => value + 1);
     if (selected?.type === "clinic") {
-      const [clinic, agent] = await Promise.all([
-        api.getClinic(selected.id), api.getAgentRecommendation(selected.id),
-      ]);
-      setSelectedClinic(clinic); setRecommendation(agent);
+      await refreshSelectedSite(selected);
     }
   }
 
@@ -167,6 +214,31 @@ export default function App() {
     ]);
     setClinics(clinicList);
     setRecommendation(agent);
+  }
+
+  async function handleClinicVoiceUpdate(file: File) {
+    if (!selectedClinic) {
+      throw new Error("No clinic is selected for the voice update.");
+    }
+
+    setError(null);
+    setActionMessage(null);
+    const response = await api.voiceUpdate(selectedClinic.id, file);
+    const [clinicList, warehouseList, transferList] = await Promise.all([
+      api.getClinics(),
+      api.getWarehouses(),
+      api.getTransfers(),
+    ]);
+    setSelectedClinic(response.clinic);
+    setClinics(clinicList);
+    setWarehouses(warehouseList);
+    setTransfers(transferList);
+    setRecommendation(response.recommendation);
+    setObservationRefreshKey((value) => value + 1);
+    setActionMessage(
+      `Voice update applied to ${response.clinic.name}: "${response.transcript}"`,
+    );
+    return response;
   }
 
   async function handleValidateTransfer(option: AgentRecommendation["options"][number]) {
@@ -289,6 +361,7 @@ export default function App() {
                   validatingSourceId={validatingSourceId}
                   actionMessage={actionMessage}
                   onClinicUpdate={handleClinicUpdate}
+                  onVoiceUpdate={handleClinicVoiceUpdate}
                   onValidateTransfer={handleValidateTransfer}
                   onRejectTransfer={handleRejectTransfer}
                 />

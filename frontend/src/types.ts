@@ -149,6 +149,21 @@ export type ImageIngestionResponse = {
 
 export type AudioIngestionResponse = ImageIngestionResponse & { transcript: string };
 
+export type VoiceUpdateResponse = {
+  transcript: string;
+  agent_decision: {
+    language: string;
+    action: string;
+    reasoning: string[];
+    neo4j_schema: Record<string, string[]>;
+    cypher: string | null;
+    parameters: Record<string, string | number> | null;
+  };
+  observations: Observation[];
+  clinic: Clinic;
+  recommendation: AgentRecommendation;
+};
+
 export type SituationBriefing = {
   global_status: "stable" | "watch" | "degrading" | "critical";
   headline: string;

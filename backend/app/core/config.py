@@ -21,6 +21,11 @@ class Settings(BaseSettings):
     crusoe_situation_model: str = "moonshotai/Kimi-K2.6"
     crusoe_timeout_seconds: float = 60
     crusoe_max_retries: int = 2
+    gradium_api_key: str = ""
+    gradium_base_url: str = "https://api.gradium.ai/api"
+    gradium_stt_path: str = "/stt/transcriptions"
+    gradium_stt_language: str = "en"
+    gradium_timeout_seconds: float = 30
     observation_auto_apply_confidence: float = 0.90
     max_image_upload_bytes: int = 10_485_760
     max_audio_upload_bytes: int = 26_214_400
